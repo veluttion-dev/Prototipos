@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Pipeline — Subroutine Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #000000;
+      --surface:     #080808;
+      --surface2:    #0f0f0f;
+      --border:      #1e1e1e;
+      --border2:     #2a2a2a;
+      --amber:       #FFB700;
+      --amber-soft:  rgba(255, 183, 0, 0.08);
+      --amber-mid:   rgba(255, 183, 0, 0.18);
+      --amber-glow:  0 0 24px rgba(255, 183, 0, 0.12);
+      --white:       #F0EBE0;
+      --muted:       #999999;
+      --muted2:      #303030;
+      --cyan:        #00C8FF;
+      --red:         #FF3D3D;
+      --green:       #00CC6A;
+      --lavender:    #BB80FF;
+      --orange:      #FF8C00;
+      --font-mono:   'IBM Plex Mono', 'Cascadia Code', monospace;
+      --font-display:'Bebas Neue', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.65;
+      min-height: 100vh;
+      padding-bottom: 3rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+    @keyframes blink    { 0%,100% { opacity:1; } 50% { opacity:0; } }
+    @keyframes slideRight { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+
+    .wrap { max-width: 1360px; margin: 0 auto; padding: 0 2rem; }
+
+    /* ── Header ── */
+    header { padding: 3.5rem 0 2rem; border-bottom: 1px solid var(--border); animation: fadeIn 0.6s ease both; }
+    .header-kicker { font-size: 11px; letter-spacing: 0.2em; color: var(--amber); text-transform: uppercase; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+    .header-kicker::before { content: '▶'; font-size: 8px; }
+    .header-title { font-family: var(--font-display); font-size: clamp(3rem,8vw,7rem); line-height: 0.92; letter-spacing: 0.03em; color: var(--white); margin-bottom: 1.2rem; }
+    .header-title span { color: var(--amber); }
+    .header-meta { display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+    .header-meta span { display: flex; align-items: center; gap: 0.4rem; }
+    .header-meta span::before { content: '//'; color: var(--border2); }
+
+    /* ── Sections ── */
+    .section { padding: 3rem 0 0; border-bottom: 1px solid var(--border); }
+    .section:last-of-type { border-bottom: none; }
+    .section-head { display: flex; align-items: baseline; gap: 1.2rem; margin-bottom: 2rem; }
+    .section-num { font-family: var(--font-display); font-size: 5rem; line-height: 1; color: var(--muted2); letter-spacing: -0.02em; flex-shrink: 0; user-select: none; }
+    .section-label { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--amber); display: flex; flex-direction: column; gap: 0.3rem; }
+    .section-label strong { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.06em; color: var(--white); line-height: 1; font-weight: 400; }
+    .section-rule { height: 1px; background: linear-gradient(to right, var(--amber) 0%, transparent 60%); margin-bottom: 2rem; transform-origin: left; animation: slideRight 0.6s ease both; }
+
+    /* ── Interactive Pipeline Diagram ── */
+    .pipeline-container { margin-bottom: 3rem; }
+
+    .pipeline-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+
+    .pipeline-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .pl-item { display: flex; align-items: center; gap: 0.35rem; font-size: 10px; color: var(--muted); letter-spacing: 0.06em; cursor: pointer; padding: 0.2rem 0.5rem; border: 1px solid transparent; transition: all 0.15s; }
+    .pl-item:hover { border-color: currentColor; color: var(--white); }
+    .pl-item.active { border-color: currentColor; }
+    .pl-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    .pipeline-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .pc-btn { background: transparent; border: 1px solid var(--border2); color: var(--muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.75rem; cursor: pointer; transition: all 0.15s; }
+    .pc-btn:hover { border-color: var(--amber); color: var(--amber); }
+    .pc-btn.active { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+    .pc-animate { border-color: var(--green) !important; color: var(--green) !important; }
+    .pc-animate:hover { background: rgba(0,204,106,0.07) !important; }
+    .pc-animate.running { border-color: var(--red) !important; color: var(--red) !important; }
+
+    .pipeline-svg-wrap { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; position: relative; }
+    #pipeline-svg { display: block; width: 100%; min-width: 760px; height: auto; }
+
+    /* node & edge interaction states */
+    .pnode, .pedge { transition: opacity 0.18s; }
+    .pnode.dimmed, .pedge.dimmed { opacity: 0.10; }
+    .pedge.highlighted path { stroke-width: 2.5 !important; filter: brightness(1.4); }
+    .pnode.highlighted rect.node-bg { filter: brightness(1.25); }
+
+    /* tooltip */
+    .pipeline-tooltip {
+      position: fixed;
+      background: #0c0c0c;
+      border: 1px solid var(--amber);
+      padding: 0.85rem 1.05rem;
+      max-width: 300px;
+      pointer-events: none;
+      z-index: 300;
+      box-shadow: 0 0 20px rgba(255,183,0,0.15);
+      transition: opacity 0.12s;
+    }
+    .pipeline-tooltip.hidden { opacity: 0; pointer-events: none; }
+    .pt-title { font-size: 13px; font-weight: 600; color: var(--amber); margin-bottom: 0.15rem; }
+    .pt-phase { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .pt-body  { font-size: 11.5px; color: #ccc; line-height: 1.55; font-weight: 300; }
+
+    /* hint text */
+    .diagram-hint { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-top: 0.6rem; }
+
+    /* ── Module Grid ── */
+    .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px,1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 3rem; }
+    .mod-card { background: var(--bg); padding: 1.4rem 1.6rem; position: relative; transition: background 0.2s; animation: fadeUp 0.4s ease both; }
+    .mod-card:hover { background: var(--surface); box-shadow: var(--amber-glow); }
+    .mod-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--amber); transform:scaleY(0); transform-origin:top; transition:transform 0.2s ease; }
+    .mod-card:hover::before { transform: scaleY(1); }
+    .mod-card:nth-child(1)  { animation-delay:0.05s; } .mod-card:nth-child(2)  { animation-delay:0.10s; }
+    .mod-card:nth-child(3)  { animation-delay:0.15s; } .mod-card:nth-child(4)  { animation-delay:0.20s; }
+    .mod-card:nth-child(5)  { animation-delay:0.25s; } .mod-card:nth-child(6)  { animation-delay:0.30s; }
+    .mod-card:nth-child(7)  { animation-delay:0.35s; } .mod-card:nth-child(8)  { animation-delay:0.40s; }
+    .mod-card:nth-child(9)  { animation-delay:0.45s; } .mod-card:nth-child(10) { animation-delay:0.50s; }
+
+    .mod-header { display:flex; align-items:flex-start; justify-content:space-between; gap:0.5rem; margin-bottom:0.3rem; }
+    .mod-name { font-size:13px; font-weight:600; color:var(--amber); letter-spacing:0.02em; }
+    .mod-badge { font-size:9px; letter-spacing:0.12em; text-transform:uppercase; padding:0.15rem 0.5rem; border:1px solid currentColor; flex-shrink:0; }
+    .badge-service { color:var(--green); } .badge-infra { color:var(--orange); } .badge-api { color:var(--red); }
+    .mod-pkg { font-size:11px; color:var(--muted); margin-bottom:1rem; letter-spacing:0.04em; }
+
+    .methods { list-style:none; display:flex; flex-direction:column; gap:0.6rem; }
+    .method { border-left:2px solid var(--border2); padding:0.5rem 0 0.5rem 0.75rem; transition:border-color 0.15s; }
+    .mod-card:hover .method { border-left-color:var(--muted); }
+    .mod-card:hover .method:hover { border-left-color:var(--amber); }
+    .method-sig { font-size:12.5px; font-weight:500; color:var(--white); margin-bottom:0.3rem; display:flex; align-items:center; flex-wrap:wrap; gap:0.3rem; }
+    .method-sig::before { content:'›'; color:var(--muted); margin-right:0.1rem; }
+    .method-desc { font-size:12px; color:var(--muted); line-height:1.6; font-weight:400; }
+    .method-desc code { color:var(--amber); font-size:10.5px; background:var(--amber-soft); padding:0.05rem 0.3rem; }
+    .method-desc strong { color:var(--white); font-weight:500; }
+    .method-desc em { color:var(--cyan); font-style:normal; }
+
+    .tag { display:inline-block; font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; padding:0.1rem 0.4rem; border:1px solid currentColor; }
+    .tag-suspend  { color:var(--amber);    background:rgba(255,183,0,0.07); }
+    .tag-mutex    { color:var(--orange);   background:rgba(255,140,0,0.07); }
+    .tag-flow     { color:var(--cyan);     background:rgba(0,200,255,0.07); }
+    .tag-sse      { color:var(--lavender); background:rgba(187,128,255,0.07); }
+    .tag-safe     { color:var(--green);    background:rgba(0,204,106,0.07); }
+    .tag-comp     { color:var(--red);      background:rgba(255,61,61,0.07); }
+    .tag-parallel { color:var(--green);    background:rgba(0,204,106,0.07); }
+    .tag-ffwd     { color:var(--lavender); background:rgba(187,128,255,0.07); }
+
+    /* ── Domain Table ── */
+    .domain-table { width:100%; border-collapse:collapse; border:1px solid var(--border); margin-bottom:3rem; animation:fadeUp 0.5s ease 0.3s both; }
+    .domain-table th { text-align:left; padding:0.65rem 1.2rem; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:1px solid var(--border); font-weight:400; }
+    .domain-table td { padding:0.65rem 1.2rem; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px; }
+    .domain-table tbody tr:last-child td { border-bottom:none; }
+    .domain-table tbody tr { transition:background 0.15s; }
+    .domain-table tbody tr:hover { background:var(--surface); }
+    .domain-table td:first-child { color:var(--amber); font-weight:500; white-space:nowrap; }
+    .domain-table td:nth-child(2) { color:var(--cyan); font-size:12px; white-space:nowrap; }
+    .domain-table td:nth-child(3) { color:var(--muted); font-size:12px; font-weight:400; }
+    .domain-table td:nth-child(3) code { color:var(--white); background:var(--surface2); padding:0.05rem 0.25rem; font-size:10.5px; }
+
+    /* ── Footer ── */
+    footer { border-top:1px solid var(--border); padding:1.2rem 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; font-size:10px; color:var(--muted); letter-spacing:0.1em; }
+    .footer-stats { display:flex; gap:2rem; }
+    .footer-stats span { display:flex; align-items:center; gap:0.4rem; }
+    .footer-stats span::before { content:'◆'; font-size:6px; color:var(--amber); }
+    .cursor { display:inline-block; width:7px; height:13px; background:var(--amber); vertical-align:middle; animation:blink 1s step-end infinite; margin-left:2px; }
+
+    @media (max-width:640px) { .module-grid { grid-template-columns:1fr; } .section-num { font-size:3rem; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="header-kicker">com.demo.orderpipeline &nbsp;·&nbsp; Serena LSP Analysis</div>
+    <h1 class="header-title">ORDER<br><span>PIPELINE</span><br>SUBROUTINES</h1>
+    <div class="header-meta">
+      <span>Kotlin 2.2 / Spring Boot 4.0</span>
+      <span>10 modules</span>
+      <span>20 subroutines</span>
+      <span>2026-03-11<span class="cursor"></span></span>
+    </div>
+  </header>
+
+  <!-- ══ 01 — CALL FLOW ════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-num">01</div>
+      <div class="section-label">Section<strong>Call Flow</strong></div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="pipeline-container">
+      <div class="pipeline-top">
+        <div class="pipeline-legend" id="pipeline-legend"></div>
+        <div class="pipeline-controls">
+          <span style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Filter:</span>
+          <button class="pc-btn active" data-filter="all">All</button>
+          <button class="pc-btn" data-filter="happy">Happy Path</button>
+          <button class="pc-btn" data-filter="comp">Compensation</button>
+          <button class="pc-btn" data-filter="stream">Streaming</button>
+          <button class="pc-btn pc-animate" id="pc-animate">▶ Animate</button>
+        </div>
+      </div>
+      <div class="pipeline-svg-wrap">
+        <svg id="pipeline-svg" viewBox="0 0 920 840" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="node-glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="dot-glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <!-- arrowhead markers per color -->
+            <marker id="arr-amber"    markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#FFB700"/></marker>
+            <marker id="arr-orange"   markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#FF8C00"/></marker>
+            <marker id="arr-gold"     markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#FFD700"/></marker>
+            <marker id="arr-green"    markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00CC6A"/></marker>
+            <marker id="arr-lime"     markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#80FFAA"/></marker>
+            <marker id="arr-lavender" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#BB80FF"/></marker>
+            <marker id="arr-cyan"     markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00C8FF"/></marker>
+            <marker id="arr-red"      markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#FF4444"/></marker>
+          </defs>
+          <!-- content generated by JS -->
+        </svg>
+      </div>
+      <div class="diagram-hint">Hover a node to highlight its connections · Click a node for details · Use filters to isolate paths</div>
+    </div>
+    <div id="pipeline-tooltip" class="pipeline-tooltip hidden">
+      <div class="pt-title"></div>
+      <div class="pt-phase"></div>
+      <div class="pt-body"></div>
+    </div>
+  </section>
+
+  <!-- ══ 02 — MODULES ══════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-num">02</div>
+      <div class="section-label">Section<strong>Modules &amp; Subroutines</strong></div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="module-grid">
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">OrderOrchestrator</div><span class="mod-badge badge-service">@Service</span></div>
+        <div class="mod-pkg">orchestrator/OrderOrchestrator.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> processOrder(order)</div>
+            <div class="method-desc">Public entry point. Creates <code>CompensationManager</code>, emits <em>OrderCreated</em>, delegates to <code>runPipeline</code>. Catches <code>TimeoutCancellationException</code> to trigger compensation; rethrows plain <code>CancellationException</code>.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> runPipeline(order, …)</div>
+            <div class="method-desc">Orchestrates the full pipeline: <span class="tag tag-parallel">parallel</span> inventory check + fraud eval via <code>async</code>, then sequential reserve → charge, then fire-and-forget notification. Registers compensation lambdas after each irreversible step.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> handleFailure(order, …)</div>
+            <div class="method-desc"><span class="tag tag-comp">compensation</span> Runs all registered compensations via <code>CompensationManager</code>, updates status to <strong>FAILED</strong>, emits <em>OrderFailed</em> event.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">CompensationManager</div></div>
+        <div class="mod-pkg">orchestrator/CompensationManager.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig">register(label, action: suspend () → Unit)</div>
+            <div class="method-desc">Appends a compensation lambda to the actions stack. Called immediately after each irreversible step succeeds.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> compensate()</div>
+            <div class="method-desc"><span class="tag tag-comp">compensation</span> Executes all registered actions in <strong>reverse order</strong> inside a <code>supervisorScope</code> — one compensation failure never blocks the rest.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">SimulatedInventoryService</div><span class="mod-badge badge-service">@Service</span></div>
+        <div class="mod-pkg">inventory/SimulatedInventoryService.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> checkStock(items)</div>
+            <div class="method-desc"><span class="tag tag-mutex">Mutex</span> Reads current stock levels. Throws <code>InsufficientStockException</code> if unavailable.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> reserve(orderId, items)</div>
+            <div class="method-desc"><span class="tag tag-mutex">Mutex</span> Atomically decrements stock. Wraps decrement in <code>withContext(Dispatchers.IO)</code> to demonstrate IO dispatcher pattern.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> release(orderId, items)</div>
+            <div class="method-desc"><span class="tag tag-comp">compensation</span> <span class="tag tag-safe">always succeeds</span> Restores reserved stock. Guaranteed reliable as a compensation action.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">SimulatedPaymentService</div><span class="mod-badge badge-service">@Service</span></div>
+        <div class="mod-pkg">payment/SimulatedPaymentService.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> charge(orderId, amount)</div>
+            <div class="method-desc">Simulates payment processing with configurable failure rate. Throws <code>PaymentFailedException</code> on failure. Wrapped in <code>withTimeout(5_000)</code> by orchestrator.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> refund(paymentId)</div>
+            <div class="method-desc"><span class="tag tag-comp">compensation</span> <span class="tag tag-safe">always succeeds</span> Reverses a charge. Guaranteed not to throw — compensations must be reliable.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">SimulatedFraudService</div><span class="mod-badge badge-service">@Service</span></div>
+        <div class="mod-pkg">fraud/SimulatedFraudService.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> evaluate(order)</div>
+            <div class="method-desc"><span class="tag tag-parallel">parallel</span> Runs concurrently with <code>checkStock</code> via <code>async</code>. Returns <code>FraudResult</code>. Throws <code>FraudDetectedException</code> if flagged — cancels the sibling async via structured concurrency.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">SimulatedNotificationService</div><span class="mod-badge badge-service">@Service</span></div>
+        <div class="mod-pkg">notification/SimulatedNotificationService.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> send(orderId, event)</div>
+            <div class="method-desc">
+              <span class="tag tag-ffwd">fire-and-forget</span> Launched via <code>applicationScope.launch</code> — <strong>not</strong> <code>supervisorScope</code>.<br><br>
+              Using <code>supervisorScope { launch {} }</code> would isolate failures but still <em>suspend</em> until the notification finishes, blocking the HTTP response. <code>applicationScope.launch</code> returns immediately. Failures are swallowed by a <code>CoroutineExceptionHandler</code>.
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">OrderEventBus</div><span class="mod-badge badge-infra">@Bean</span></div>
+        <div class="mod-pkg">streaming/OrderEventBus.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig">emit(event: OrderEvent)</div>
+            <div class="method-desc">Publishes to the internal <code>MutableSharedFlow</code> (replay=0). Non-suspend — uses <code>tryEmit</code> semantics.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig">subscribe(): Flow&lt;OrderEvent&gt;</div>
+            <div class="method-desc"><span class="tag tag-flow">SharedFlow</span> Exposes the shared flow for subscribers. Used by SSE endpoints to stream events to clients.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">OrderStatusTracker</div><span class="mod-badge badge-infra">@Bean</span></div>
+        <div class="mod-pkg">streaming/OrderStatusTracker.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig">update(orderId, status)</div>
+            <div class="method-desc">Creates or updates a <code>MutableStateFlow&lt;OrderStatus&gt;</code> per order in a <code>ConcurrentHashMap</code>.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig">statusOf(orderId): StateFlow?</div>
+            <div class="method-desc"><span class="tag tag-flow">StateFlow</span> Returns the live status flow for an order. <code>null</code> if unknown (triggers 404).</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">OrderController</div><span class="mod-badge badge-api">@RestController</span></div>
+        <div class="mod-pkg">api/OrderController.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> placeOrder(request)</div>
+            <div class="method-desc"><code>POST /orders</code> — Validates and submits a new order to the orchestrator. Returns <code>OrderResult</code>.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig"><span class="tag tag-suspend">suspend</span> getStatus(orderId)</div>
+            <div class="method-desc"><code>GET /orders/{id}/status</code> — Returns current <code>OrderStatus</code> from the tracker. 404 if unknown.</div>
+          </li>
+          <li class="method">
+            <div class="method-sig">streamOrderEvents(orderId)</div>
+            <div class="method-desc"><span class="tag tag-sse">SSE</span> <code>GET /orders/{id}/events</code> — Returns <code>Flow&lt;ServerSentEvent&gt;</code> filtered to a specific order's events.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mod-card">
+        <div class="mod-header"><div class="mod-name">AdminController</div><span class="mod-badge badge-api">@RestController</span></div>
+        <div class="mod-pkg">api/AdminController.kt</div>
+        <ul class="methods">
+          <li class="method">
+            <div class="method-sig">streamAllEvents()</div>
+            <div class="method-desc"><span class="tag tag-sse">SSE</span> <code>GET /admin/events</code> — Broadcasts <strong>all</strong> <code>OrderEvent</code>s from the bus to admin subscribers in real time.</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 03 — DOMAIN MODEL ═════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-num">03</div>
+      <div class="section-label">Section<strong>Domain Model</strong></div>
+    </div>
+    <div class="section-rule"></div>
+
+    <table class="domain-table">
+      <thead><tr><th>Type</th><th>Kind</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Order</td><td>data class</td><td>Core aggregate — id, items, customer, computed <code>totalAmount</code></td></tr>
+        <tr><td>OrderItem</td><td>data class</td><td>Line item with product id, quantity, and unit price</td></tr>
+        <tr><td>Money</td><td>data class</td><td>Value object wrapping amount + currency</td></tr>
+        <tr><td>OrderStatus</td><td>enum</td><td>PENDING → VALIDATING → FRAUD_CHECKED → INVENTORY_RESERVED → PAYMENT_CHARGED → COMPLETED / FAILED</td></tr>
+        <tr><td>OrderResult</td><td>data class</td><td>Outcome returned to the HTTP caller after the pipeline completes</td></tr>
+        <tr><td>PaymentConfirmation</td><td>data class</td><td>Holds <code>paymentId</code> returned by <code>PaymentService.charge()</code> — used as compensation key</td></tr>
+        <tr><td>FraudResult</td><td>data class</td><td>Risk score + approved flag returned by <code>FraudService.evaluate()</code></td></tr>
+        <tr><td>OrderEvent</td><td>sealed class</td><td>OrderCreated / FraudChecked / InventoryReserved / PaymentCharged / OrderCompleted / OrderFailed</td></tr>
+        <tr><td>DomainException</td><td>sealed class</td><td>Base for domain failures — <code>InsufficientStockException</code>, <code>FraudDetectedException</code>, <code>PaymentFailedException</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <div class="footer-stats">
+      <span>10 modules</span><span>20 subroutines</span><span>Kotlin 2.2 · Spring Boot 4.0 · WebFlux</span>
+    </div>
+    <div>Generated by Serena LSP + Claude Code</div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // ── Node definitions ────────────────────────────────────────
+  // Each node: id, x/y = center, w/h = dimensions, phase, label, sub, tooltip
+  const NW = 155, NH = 46; // default node size
+  const NODES = [
+    { id:'client',        x:460, y:52,  w:140, h:42, phase:'ext',    label:'HTTP Client',         sub:'external caller',
+      tip:'External HTTP client. Sends POST /orders to submit orders, GET /orders/{id}/status for polling, and subscribes via SSE for real-time event streams.' },
+    { id:'oc',            x:308, y:160, w:NW,  h:NH, phase:'api',    label:'OrderController',     sub:'POST · GET · SSE',
+      tip:'placeOrder() → POST /orders\ngetStatus() → GET /orders/{id}/status\nstreamOrderEvents() → SSE stream filtered per order.' },
+    { id:'ac',            x:638, y:160, w:140, h:NH, phase:'api',    label:'AdminController',     sub:'GET /admin/events',
+      tip:'streamAllEvents() — real-time SSE broadcast of every OrderEvent emitted to the bus. For admin/observability purposes.' },
+    { id:'processOrder',  x:460, y:268, w:175, h:NH, phase:'orch',   label:'processOrder()',      sub:'entry · error boundary',
+      tip:'Public entry point of the orchestrator. Creates CompensationManager, emits OrderCreated, delegates to runPipeline. Catches TimeoutCancellationException to run compensation; rethrows plain CancellationException.' },
+    { id:'runPipeline',   x:460, y:368, w:NW,  h:NH, phase:'orch',   label:'runPipeline()',       sub:'coordinates all phases',
+      tip:'Orchestrates: parallel fraud+inventory → sequential reserve → charge → fire-and-forget notification. Registers compensation lambdas after each irreversible step.' },
+    { id:'checkStock',    x:295, y:473, w:NW,  h:NH, phase:'par',    label:'checkStock()',        sub:'InventoryService · Mutex',
+      tip:'Runs concurrently with evaluate() via async inside coroutineScope. Reads stock under Mutex. Throws InsufficientStockException. Wrapped in withTimeout(3000).' },
+    { id:'evaluate',      x:628, y:473, w:140, h:NH, phase:'par',    label:'evaluate()',          sub:'FraudService',
+      tip:'Runs concurrently with checkStock() via async. Returns FraudResult. Throws FraudDetectedException if flagged — cancels sibling async. Wrapped in withTimeout(3000).' },
+    { id:'reserve',       x:460, y:576, w:NW,  h:NH, phase:'seq',    label:'reserve()',           sub:'InventoryService · IO ctx',
+      tip:'Sequential after parallel phase. Atomically decrements stock under Mutex. Uses withContext(Dispatchers.IO) to demonstrate the IO dispatcher pattern.' },
+    { id:'charge',        x:460, y:666, w:NW,  h:NH, phase:'seq',    label:'charge()',            sub:'PaymentService',
+      tip:'Processes payment with configurable failure rate. Throws PaymentFailedException. Wrapped in withTimeout(5000) by orchestrator. Compensation: refund().' },
+    { id:'send',          x:460, y:754, w:NW,  h:NH, phase:'notify', label:'send()',              sub:'applicationScope.launch',
+      tip:'Launched via applicationScope.launch — NOT supervisorScope. Returns immediately; HTTP response is not blocked. Failures swallowed by CoroutineExceptionHandler. supervisorScope would isolate failures but still suspend until done.' },
+    { id:'eventBus',      x:808, y:400, w:150, h:NH, phase:'stream', label:'OrderEventBus',       sub:'MutableSharedFlow(replay=0)',
+      tip:'emit() publishes via tryEmit (non-suspend). subscribe() returns the shared flow. AdminController and per-order SSE both subscribe here.' },
+    { id:'statusTracker', x:808, y:495, w:150, h:NH, phase:'stream', label:'StatusTracker',       sub:'MutableStateFlow / ConcurrentMap',
+      tip:'Holds MutableStateFlow<OrderStatus> per order in a ConcurrentHashMap. update() sets status; statusOf() returns the live flow (null triggers 404).' },
+    { id:'handleFailure', x:108, y:368, w:160, h:NH, phase:'comp',   label:'handleFailure()',     sub:'OrderOrchestrator',
+      tip:'Called on any exception (including TimeoutCancellationException). Runs all registered compensations, updates status to FAILED, emits OrderFailed event.' },
+    { id:'compManager',   x:108, y:460, w:NW,  h:NH, phase:'comp',   label:'compensate()',        sub:'CompensationManager',
+      tip:'Executes all registered compensations in REVERSE order inside supervisorScope — one failure never blocks remaining compensations.' },
+    { id:'refund',        x:108, y:548, w:140, h:NH, phase:'comp',   label:'refund()',            sub:'PaymentService · always safe',
+      tip:'Reverses a charge. Guaranteed never to throw. Executed 1st in compensation (last registered = first compensated — reverse order).' },
+    { id:'release',       x:108, y:636, w:140, h:NH, phase:'comp',   label:'release()',           sub:'InventoryService · always safe',
+      tip:'Restores reserved stock. Guaranteed never to throw. Executed 2nd in compensation (first registered = last compensated — reverse order).' },
+  ];
+
+  // ── Phase styling ────────────────────────────────────────────
+  const PHASES = {
+    ext:    { label:'Client',          color:'#FFB700', bg:'#110e00' },
+    api:    { label:'API Layer',        color:'#FF8C00', bg:'#150800' },
+    orch:   { label:'Orchestrator',     color:'#FFD700', bg:'#110e00' },
+    par:    { label:'Parallel Phase',   color:'#00CC6A', bg:'#001408' },
+    seq:    { label:'Sequential',       color:'#80FFAA', bg:'#001408' },
+    notify: { label:'Fire-and-Forget',  color:'#BB80FF', bg:'#0d0015' },
+    stream: { label:'Streaming',        color:'#00C8FF', bg:'#001015' },
+    comp:   { label:'Compensation',     color:'#FF4444', bg:'#150000' },
+  };
+
+  // ── Edge definitions ─────────────────────────────────────────
+  // p0=start, p1=c1, p2=c2, p3=end (cubic bezier)
+  // marker = arrowhead id suffix, filter = path category, anim = animate on happy-path
+  const EDGES = [
+    { id:'e1',  filter:'happy',  color:'#FFB700', marker:'amber',    dash:null,  label:'POST /orders',   from:'client',       to:'oc',
+      p0:{x:389,y:52},  p1:{x:338,y:52},  p2:{x:308,y:94},  p3:{x:308,y:137} },
+    { id:'e2',  filter:'stream', color:'#00C8FF', marker:'cyan',     dash:'5,3', label:'SSE',            from:'client',       to:'ac',
+      p0:{x:531,y:52},  p1:{x:582,y:52},  p2:{x:638,y:94},  p3:{x:638,y:137} },
+    { id:'e3',  filter:'happy',  color:'#FF8C00', marker:'orange',   dash:null,  label:'delegates',      from:'oc',           to:'processOrder',
+      p0:{x:308,y:183}, p1:{x:308,y:222}, p2:{x:460,y:200}, p3:{x:460,y:245} },
+    { id:'e4',  filter:'happy',  color:'#FFD700', marker:'gold',     dash:null,  label:'',               from:'processOrder', to:'runPipeline',
+      p0:{x:460,y:291}, p1:{x:460,y:319}, p2:{x:460,y:319}, p3:{x:460,y:345} },
+    { id:'e5',  filter:'comp',   color:'#FF4444', marker:'red',      dash:'6,3', label:'on exception',   from:'processOrder', to:'handleFailure',
+      p0:{x:372,y:268}, p1:{x:295,y:268}, p2:{x:190,y:345}, p3:{x:190,y:345} },
+    { id:'e6',  filter:'happy',  color:'#00CC6A', marker:'green',    dash:null,  label:'async',          from:'runPipeline',  to:'checkStock',
+      p0:{x:460,y:391}, p1:{x:460,y:432}, p2:{x:295,y:418}, p3:{x:295,y:450} },
+    { id:'e7',  filter:'happy',  color:'#00CC6A', marker:'green',    dash:null,  label:'async',          from:'runPipeline',  to:'evaluate',
+      p0:{x:460,y:391}, p1:{x:460,y:432}, p2:{x:628,y:418}, p3:{x:628,y:450} },
+    { id:'e8',  filter:'happy',  color:'#80FFAA', marker:'lime',     dash:null,  label:'await',          from:'checkStock',   to:'reserve',
+      p0:{x:295,y:496}, p1:{x:295,y:532}, p2:{x:460,y:518}, p3:{x:460,y:553} },
+    { id:'e9',  filter:'happy',  color:'#80FFAA', marker:'lime',     dash:null,  label:'await',          from:'evaluate',     to:'reserve',
+      p0:{x:628,y:496}, p1:{x:628,y:532}, p2:{x:460,y:518}, p3:{x:460,y:553} },
+    { id:'e10', filter:'happy',  color:'#80FFAA', marker:'lime',     dash:null,  label:'',               from:'reserve',      to:'charge',
+      p0:{x:460,y:599}, p1:{x:460,y:622}, p2:{x:460,y:622}, p3:{x:460,y:643} },
+    { id:'e11', filter:'happy',  color:'#BB80FF', marker:'lavender', dash:'4,4', label:'launch',         from:'charge',       to:'send',
+      p0:{x:460,y:689}, p1:{x:460,y:711}, p2:{x:460,y:711}, p3:{x:460,y:731} },
+    { id:'e12', filter:'stream', color:'#00C8FF', marker:'cyan',     dash:'3,4', label:'emit()',         from:'runPipeline',  to:'eventBus',
+      p0:{x:538,y:368}, p1:{x:640,y:368}, p2:{x:683,y:400}, p3:{x:733,y:400} },
+    { id:'e13', filter:'stream', color:'#00C8FF', marker:'cyan',     dash:'3,4', label:'update()',       from:'runPipeline',  to:'statusTracker',
+      p0:{x:538,y:368}, p1:{x:645,y:368}, p2:{x:695,y:495}, p3:{x:733,y:495} },
+    { id:'e14', filter:'stream', color:'#00C8FF', marker:'cyan',     dash:'3,4', label:'statusOf()',     from:'oc',           to:'statusTracker',
+      p0:{x:386,y:160}, p1:{x:600,y:160}, p2:{x:808,y:350}, p3:{x:808,y:472} },
+    { id:'e15', filter:'stream', color:'#00C8FF', marker:'cyan',     dash:'3,4', label:'subscribe()',    from:'ac',           to:'eventBus',
+      p0:{x:638,y:183}, p1:{x:638,y:280}, p2:{x:808,y:340}, p3:{x:808,y:377} },
+    { id:'e16', filter:'comp',   color:'#FF4444', marker:'red',      dash:null,  label:'',               from:'handleFailure',to:'compManager',
+      p0:{x:108,y:391}, p1:{x:108,y:416}, p2:{x:108,y:416}, p3:{x:108,y:437} },
+    { id:'e17', filter:'comp',   color:'#FF4444', marker:'red',      dash:null,  label:'1st (reverse)',  from:'compManager',  to:'refund',
+      p0:{x:108,y:483}, p1:{x:108,y:506}, p2:{x:108,y:506}, p3:{x:108,y:525} },
+    { id:'e18', filter:'comp',   color:'#FF4444', marker:'red',      dash:null,  label:'2nd',            from:'refund',       to:'release',
+      p0:{x:108,y:571}, p1:{x:108,y:594}, p2:{x:108,y:594}, p3:{x:108,y:613} },
+  ];
+
+  // ── Happy path animation sequence (tStart/tEnd as fraction of 5s loop) ──
+  const ANIM_SEQ = [
+    { edge:'e1',  tS:0.00, tE:0.12 },
+    { edge:'e3',  tS:0.12, tE:0.22 },
+    { edge:'e4',  tS:0.22, tE:0.32 },
+    { edge:'e6',  tS:0.32, tE:0.46 },
+    { edge:'e7',  tS:0.32, tE:0.46 },  // parallel
+    { edge:'e8',  tS:0.46, tE:0.57 },
+    { edge:'e9',  tS:0.46, tE:0.57 },  // parallel converge
+    { edge:'e10', tS:0.57, tE:0.67 },
+    { edge:'e11', tS:0.67, tE:0.78 },
+  ];
+  const ANIM_TOTAL = 5000; // ms
+
+  // ── Build lookup maps ────────────────────────────────────────
+  const nodeMap = Object.fromEntries(NODES.map(n => [n.id, n]));
+  const edgeMap  = Object.fromEntries(EDGES.map(e => [e.id, e]));
+
+  // Per-node: which edge ids connect to it
+  const nodeEdges = {};
+  NODES.forEach(n => { nodeEdges[n.id] = []; });
+  EDGES.forEach(e => {
+    nodeEdges[e.from].push(e.id);
+    nodeEdges[e.to].push(e.id);
+  });
+
+  // ── SVG helpers ──────────────────────────────────────────────
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  }
+
+  function pathD(e) {
+    return `M${e.p0.x},${e.p0.y} C${e.p1.x},${e.p1.y} ${e.p2.x},${e.p2.y} ${e.p3.x},${e.p3.y}`;
+  }
+
+  function bezierPt(e, t) {
+    const mt = 1 - t;
+    return {
+      x: mt*mt*mt*e.p0.x + 3*mt*mt*t*e.p1.x + 3*mt*t*t*e.p2.x + t*t*t*e.p3.x,
+      y: mt*mt*mt*e.p0.y + 3*mt*mt*t*e.p1.y + 3*mt*t*t*e.p2.y + t*t*t*e.p3.y,
+    };
+  }
+
+  // midpoint label position (t=0.5)
+  function midPt(e) { return bezierPt(e, 0.5); }
+
+  // ── Render SVG ───────────────────────────────────────────────
+  const svg = document.getElementById('pipeline-svg');
+
+  // Layer order: edges → nodes → anim dots
+  const edgesLayer = svgEl('g', { id:'edges-layer' });
+  const nodesLayer  = svgEl('g', { id:'nodes-layer' });
+  const dotsLayer   = svgEl('g', { id:'dots-layer' });
+  svg.append(edgesLayer, nodesLayer, dotsLayer);
+
+  // Section backgrounds (visual grouping)
+  const GROUPS = [
+    { label:'PARALLEL',   x:215, y:452, w:460, h:72, color:'#00CC6A' },
+    { label:'SEQUENTIAL', x:355, y:556, w:215, h:155, color:'#80FFAA' },
+    { label:'STREAMING',  x:726, y:355, w:175, h:200, color:'#00C8FF' },
+    { label:'COMPENSATION',x:30,  y:348, w:170, h:310, color:'#FF4444' },
+  ];
+  const groupsLayer = svgEl('g', { id:'groups-layer', opacity:'1' });
+  svg.insertBefore(groupsLayer, edgesLayer);
+
+  GROUPS.forEach(g => {
+    const rect = svgEl('rect', { x:g.x, y:g.y, width:g.w, height:g.h, fill:g.color, 'fill-opacity':'0.04', rx:'3', stroke:g.color, 'stroke-opacity':'0.15', 'stroke-width':'1' });
+    const txt  = svgEl('text', { x:g.x+8, y:g.y+12, fill:g.color, 'fill-opacity':'0.5', 'font-family':"'IBM Plex Mono',monospace", 'font-size':'9', 'letter-spacing':'0.12em' });
+    txt.textContent = g.label;
+    groupsLayer.append(rect, txt);
+  });
+
+  // Render edges
+  EDGES.forEach(e => {
+    const g = svgEl('g', { class:'pedge', 'data-id':e.id, 'data-filter':e.filter, 'data-from':e.from, 'data-to':e.to });
+    const p = svgEl('path', {
+      d: pathD(e),
+      fill: 'none',
+      stroke: e.color,
+      'stroke-width': '1.5',
+      'stroke-opacity': '0.7',
+      'stroke-dasharray': e.dash || 'none',
+      'marker-end': `url(#arr-${e.marker})`,
+    });
+    g.appendChild(p);
+    if (e.label) {
+      const m = midPt(e);
+      const bg = svgEl('rect', { x:m.x-28, y:m.y-8, width:56, height:14, fill:'#000', rx:'2', opacity:'0.85' });
+      const t  = svgEl('text', { x:m.x, y:m.y+4, 'text-anchor':'middle', fill:e.color, 'fill-opacity':'0.9', 'font-family':"'IBM Plex Mono',monospace", 'font-size':'9', 'letter-spacing':'0.06em' });
+      t.textContent = e.label;
+      g.append(bg, t);
+    }
+    edgesLayer.appendChild(g);
+  });
+
+  // Render nodes
+  NODES.forEach(n => {
+    const ph = PHASES[n.phase];
+    const hw = n.w / 2, hh = n.h / 2;
+    const g = svgEl('g', { class:'pnode', 'data-id':n.id, style:'cursor:pointer' });
+
+    // bg rect
+    const rect = svgEl('rect', { class:'node-bg', x:n.x-hw, y:n.y-hh, width:n.w, height:n.h, fill:ph.bg, stroke:ph.color, 'stroke-width':'1', rx:'3', 'stroke-opacity':'0.8' });
+    // left accent bar
+    const bar = svgEl('rect', { x:n.x-hw, y:n.y-hh, width:'3', height:n.h, fill:ph.color, rx:'1.5' });
+    // label
+    const label = svgEl('text', { x:n.x-hw+10, y:n.y-1, fill:ph.color, 'font-family':"'IBM Plex Mono',monospace", 'font-size':'11.5', 'font-weight':'600', 'letter-spacing':'0.02em' });
+    label.textContent = n.label;
+    // sub
+    const sub = svgEl('text', { x:n.x-hw+10, y:n.y+12, fill:ph.color, 'fill-opacity':'0.5', 'font-family':"'IBM Plex Mono',monospace", 'font-size':'8.5', 'letter-spacing':'0.06em' });
+    sub.textContent = n.sub || '';
+
+    g.append(rect, bar, label, sub);
+    nodesLayer.appendChild(g);
+  });
+
+  // ── Tooltip ──────────────────────────────────────────────────
+  const tooltip = document.getElementById('pipeline-tooltip');
+  const ttTitle = tooltip.querySelector('.pt-title');
+  const ttPhase = tooltip.querySelector('.pt-phase');
+  const ttBody  = tooltip.querySelector('.pt-body');
+
+  function showTooltip(n, evt) {
+    const ph = PHASES[n.phase];
+    ttTitle.textContent = n.label;
+    ttPhase.textContent = ph.label;
+    ttPhase.style.color = ph.color;
+    ttBody.textContent  = n.tip;
+    tooltip.classList.remove('hidden');
+    moveTooltip(evt);
+  }
+  function hideTooltip() { tooltip.classList.add('hidden'); }
+  function moveTooltip(evt) {
+    const x = evt.clientX + 16, y = evt.clientY + 16;
+    const maxX = window.innerWidth - 320, maxY = window.innerHeight - 160;
+    tooltip.style.left = Math.min(x, maxX) + 'px';
+    tooltip.style.top  = Math.min(y, maxY) + 'px';
+  }
+
+  // ── Hover interaction ────────────────────────────────────────
+  let activeFilter = 'all';
+
+  function applyFilter() {
+    document.querySelectorAll('.pedge').forEach(el => {
+      const f = el.dataset.filter;
+      el.classList.toggle('dimmed', activeFilter !== 'all' && f !== activeFilter);
+    });
+    document.querySelectorAll('.pnode').forEach(el => {
+      if (activeFilter === 'all') { el.classList.remove('dimmed'); return; }
+      // Keep node visible if any of its edges match the filter
+      const nid = el.dataset.id;
+      const hasEdge = nodeEdges[nid].some(eid => {
+        const e = edgeMap[eid];
+        return e && e.filter === activeFilter;
+      });
+      el.classList.toggle('dimmed', !hasEdge);
+    });
+  }
+
+  function highlightNode(nid) {
+    const connectedEdges  = new Set(nodeEdges[nid]);
+    const connectedNodes  = new Set([nid]);
+    EDGES.forEach(e => { if (connectedEdges.has(e.id)) { connectedNodes.add(e.from); connectedNodes.add(e.to); } });
+
+    document.querySelectorAll('.pnode').forEach(el => {
+      const id = el.dataset.id;
+      el.classList.remove('dimmed', 'highlighted');
+      if (connectedNodes.has(id)) el.classList.add('highlighted');
+      else el.classList.add('dimmed');
+    });
+    document.querySelectorAll('.pedge').forEach(el => {
+      const id = el.dataset.id;
+      el.classList.remove('dimmed', 'highlighted');
+      if (connectedEdges.has(id)) el.classList.add('highlighted');
+      else el.classList.add('dimmed');
+    });
+  }
+
+  function clearHighlight() {
+    document.querySelectorAll('.pnode, .pedge').forEach(el => { el.classList.remove('dimmed','highlighted'); });
+    applyFilter();
+  }
+
+  // Attach node events
+  nodesLayer.querySelectorAll('.pnode').forEach(el => {
+    el.addEventListener('mouseenter', evt => {
+      highlightNode(el.dataset.id);
+      showTooltip(nodeMap[el.dataset.id], evt);
+    });
+    el.addEventListener('mousemove', moveTooltip);
+    el.addEventListener('mouseleave', () => { clearHighlight(); hideTooltip(); });
+  });
+
+  // ── Filter buttons ───────────────────────────────────────────
+  document.querySelectorAll('.pc-btn[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.pc-btn[data-filter]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      applyFilter();
+    });
+  });
+
+  // ── Phase legend ─────────────────────────────────────────────
+  const legendEl = document.getElementById('pipeline-legend');
+  Object.entries(PHASES).forEach(([key, ph]) => {
+    const item = document.createElement('div');
+    item.className = 'pl-item';
+    item.innerHTML = `<span class="pl-dot" style="background:${ph.color}"></span>${ph.label}`;
+    legendEl.appendChild(item);
+  });
+
+  // ── Flow animation ───────────────────────────────────────────
+  let animRunning = false;
+  let animStart   = null;
+  let rafId       = null;
+
+  const animBtn = document.getElementById('pc-animate');
+
+  function tick(ts) {
+    if (!animRunning) return;
+    if (!animStart) animStart = ts;
+    const t = ((ts - animStart) % ANIM_TOTAL) / ANIM_TOTAL;
+
+    while (dotsLayer.firstChild) dotsLayer.removeChild(dotsLayer.firstChild);
+
+    ANIM_SEQ.forEach(seq => {
+      const lt = (t - seq.tS) / (seq.tE - seq.tS);
+      if (lt < 0 || lt > 1) return;
+      const edge = edgeMap[seq.edge];
+      const pt   = bezierPt(edge, lt);
+      const ph   = PHASES[nodeMap[edge.from].phase];
+      const dot  = svgEl('circle', { cx:pt.x, cy:pt.y, r:'5', fill:edge.color, filter:'url(#dot-glow)', opacity:'0.95' });
+      dotsLayer.appendChild(dot);
+    });
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  animBtn.addEventListener('click', () => {
+    animRunning = !animRunning;
+    if (animRunning) {
+      animStart = null;
+      animBtn.textContent = '■ Stop';
+      animBtn.classList.add('running');
+      rafId = requestAnimationFrame(tick);
+    } else {
+      animBtn.textContent = '▶ Animate';
+      animBtn.classList.remove('running');
+      if (rafId) cancelAnimationFrame(rafId);
+      while (dotsLayer.firstChild) dotsLayer.removeChild(dotsLayer.firstChild);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
